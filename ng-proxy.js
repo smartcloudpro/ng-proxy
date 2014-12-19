@@ -5,14 +5,14 @@
     var services;
     services = angular.module('ng-proxy', []);
     services.factory('$proxy', function ($http) {
-        var DataProxy, Proxy;   
+        var DataProxy, Proxy;
         Proxy = (function () {
             function Proxy(options) {
                 this._opt = options;
             }
 
             Proxy.prototype = {
-                request: function (params, callback, errCallback) {
+                request: function (params, query, callback, errCallback) {
                     var _ref;
                     if (this._opt.type === 'hsf' || this._opt.type === 'mysql') {
                         params = {
@@ -23,9 +23,9 @@
                         method: this._opt.method,
                         url: this._opt.bypass ? this._opt.url + ((_ref = this._opt.url.indexOf('?') === -1) != null ? _ref : {
                             '?': '&'
-                        }) + '_version=' + this._opt.version : Proxy.base + '/' + this._opt.id,
+                        }) + '_version=' + this._opt.version : this.parsePath(Proxy.base + '/' + this._opt.id, query),
                         headers: {
-                            'Content-Type': void 0
+                            'Content-Type': 'application/x-www-form-urlencoded'
                         },
                         data: params
                     }).success(callback).error(errCallback);
@@ -33,8 +33,18 @@
                 },
                 getOptions: function () {
                     return this._opt;
+                },
+                parsePath: function (path, query) {
+                    if (!path || typeof path !== 'string') return path;
+                    if (typeof query !== 'object') return path;
+                    path = path + '?';
+                    for (var key in query) {
+                        path = path + key + "=" + query[key] + '&';
+                    }
+                    path = path.replace(/&$/, '');
+                    return path;
                 }
-            };
+            }
 
             Proxy.objects = {};
 
@@ -121,9 +131,7 @@
                     methodName;
                     for (id in profile) {
                         methodName = profile[id];
-                        console.log(methodName);
                         methodName = methodName.substring(methodName.lastIndexOf('.') + 1);
-                        console.log(methodName);
                         if (!prof[methodName]) {
                             prof[methodName] = profile[id];
                         } else {
@@ -137,13 +145,15 @@
                     this[method] = (function (methodName, interfaceId) {
                         var proxy;
                         proxy = Proxy.create(interfaceId);
-                        return function (params) {
+                        return function (params, query) {
+                            console.log(params)
                             params = params || {};
                             if (!this._queue) {
                                 this._queue = [];
                             }
                             this._queue.push({
                                 params: params,
+                                query: query,
                                 proxy: proxy
                             });
                             return this;
@@ -173,7 +183,7 @@
                     _results = [];
                     for (var i = 0; i < queue.length; i++) {
                         (function (reqObj, k) {
-                            return reqObj.proxy.request(reqObj.params, function (data) {
+                            return reqObj.proxy.request(reqObj.params, reqObj.query, function (data) {
                                 args[k] = data;
                                 return --cnt || callback.apply(self, args);
                             }, function (err) {
