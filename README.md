@@ -1,4 +1,7 @@
 ng-proxy
 ========
-
-angularjs ali-data-proxy client
+```sh
+$ npm install ali-data-proxy-lite
+```
+===
+angularjs ali-data-proxy client module
